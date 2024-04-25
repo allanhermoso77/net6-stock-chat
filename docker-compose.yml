@@ -1,0 +1,75 @@
+version: "3"
+services:
+    stock-db:
+        image: "mcr.microsoft.com/mssql/server:2019-CU8-ubuntu-16.04"
+        container_name: "stock-db"
+        ports:
+            - "1435:1433"
+        volumes: 
+            - sqlsystem:/var/opt/mssql/
+            - sqldata:/var/opt/sqlserver/data
+            - sqllog:/var/opt/sqlserver/log
+            - sqlbackup:/var/opt/sqlserver/backup
+        environment:
+            SA_PASSWORD: "dev@1234"
+            ACCEPT_EULA: "Y"
+
+    stockchat:
+        container_name: "stockchat"
+        build: 
+            context: .
+            dockerfile: ./Api.Dockerfile
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Production
+            - DB_CONNECTION_STRING=Server=stock-db;Database=stock;User=sa;Password=dev@1234
+        ports: 
+            - "8082:5001"
+        networks:
+            default:
+                aliases: 
+                    - stock-chat.api
+        depends_on: 
+            - stock-db
+
+    rabbitmq-service:
+        container_name: rabbitmq-service2
+        tty: true
+        hostname: rabbitmq
+        ports:
+            - 15673:15673
+            - 5673:5673
+        image: rabbitmq:3-management
+        depends_on: 
+            - stock-db
+            - stockchat
+
+    stockchat-worker:
+        container_name: "stockchat-worker"
+        build: 
+            context: .
+            dockerfile: ./RabbitMq.Dockerfile
+        environment: 
+            - ASPNETCORE_ENVIRONMENT=Production
+        depends_on: 
+            - stockchat
+            - stock-db
+            - rabbitmq-service
+
+    web-app:
+        container_name: "stockchat-webapp"
+        build: 
+            context: .
+            dockerfile: ./Web.Dockerfile
+        environment: 
+            - ASPNETCORE_ENVIRONMENT=Production
+        ports: 
+            - "8080:5002"
+        depends_on: 
+            - stock-db
+            - stockchat
+            - rabbitmq-service
+volumes:
+    sqlsystem:
+    sqldata:
+    sqllog:
+    sqlbackup:
