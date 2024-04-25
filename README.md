@@ -26,7 +26,7 @@ Chat with C# dotnet, SignalR, RabbitMQ, Identity using DDD and clean architectur
 - Bootstrap
 - Javascript
 
-## Installer
+## Installer Requirements
 
 - Docker Desktop
 - Docker File 
